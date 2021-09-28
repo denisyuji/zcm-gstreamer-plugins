@@ -248,8 +248,9 @@ gst_zcmmultifilesink_setcaps (GstBaseSink * bsink, GstCaps * caps)
     return FALSE;
   }
 
-  GstVideoFormat pixelformat = GST_VIDEO_INFO_FORMAT(&info);
   zcmmultifilesink->pixelformat = gst_video_format_to_fourcc (GST_VIDEO_INFO_FORMAT(&info));
+#if 0  
+  GstVideoFormat pixelformat = GST_VIDEO_INFO_FORMAT(&info);
   if (zcmmultifilesink->pixelformat == 0) {
     switch (pixelformat) {
       case GST_VIDEO_FORMAT_RGBA:
@@ -263,6 +264,7 @@ gst_zcmmultifilesink_setcaps (GstBaseSink * bsink, GstCaps * caps)
         zcmmultifilesink->pixelformat = ZCM_GSTREAMER_PLUGINS_IMAGE_T_PIXEL_FORMAT_MJPEG;
     }
   }
+#endif    
 
   zcmmultifilesink->info = info;
 

@@ -232,6 +232,7 @@ static int
 gst_update_src_caps (GstBaseSrc * src, GstZcmImageSrc *filter, GstBuffer *buffer)
 {
     GstCaps *caps = NULL;
+#if 0
     GstStructure *s = NULL;
 
     caps = (GstCaps *)gst_type_find_helper_for_buffer (GST_OBJECT (src),
@@ -270,7 +271,10 @@ gst_update_src_caps (GstBaseSrc * src, GstZcmImageSrc *filter, GstBuffer *buffer
         gst_caps_set_simple (caps, "format", G_TYPE_STRING, "BGRA", NULL);
     else
         return -1;
-
+#else
+    caps = gst_caps_new_empty_simple ("video/x-bayer");
+    gst_caps_set_simple (caps, "format", G_TYPE_STRING, "rggb", NULL);
+#endif
     gst_caps_set_simple (caps, "framerate",GST_TYPE_FRACTION,  25, 1, NULL);
     gst_caps_set_simple (caps, "width", G_TYPE_INT, filter->frame_info.width,
             "height", G_TYPE_INT, filter->frame_info.height, NULL);

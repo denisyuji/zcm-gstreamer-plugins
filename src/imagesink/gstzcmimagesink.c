@@ -80,12 +80,21 @@ enum
     GRAY16_LE (zcm: LE_GRAY16)
     RGB16 (zcm: LE_RGB16)
 */
-#define VIDEO_SINK_CAPS \
+#define GST_GENICAM_PIXEL_FORMAT_MAKE_BAYER8(format)                     \
+   "video/x-bayer, "                                       \
+  "format = (string) " format ", "                     \
+  "width = " GST_VIDEO_SIZE_RANGE ", "                     \
+  "height = " GST_VIDEO_SIZE_RANGE ", "                    \
+  "framerate = " GST_VIDEO_FPS_RANGE
+
+#define VIDEO_SINK_CAPS GST_GENICAM_PIXEL_FORMAT_MAKE_BAYER8("rggb")
+
+#if 0
+#define VIDEO_SINK_CAPS 
     GST_VIDEO_CAPS_MAKE("{ UYVY, YUY2, IYU1, IYU2, I420, NV12, GRAY8," \
-                        "  RGB, BGR, RGBA, BGRA, GRAY16_BE, GRAY16_LE," \
+                        "  RGB, BGR, RGBA, BGRA, GRAY16_BE, GRAY16_LE, RGGB, " \
                         "  RGB16 }")
-
-
+#endif
 /* Private members */
 
 static void
@@ -121,6 +130,7 @@ gst_zcmimagesink_setcaps (GstBaseSink * bsink, GstCaps * caps)
   zcmimagesink->img.width = info.width;
   zcmimagesink->img.height = info.height;
 
+#if 0
   GstVideoFormat pixelformat = GST_VIDEO_INFO_FORMAT(&info);
   zcmimagesink->img.pixelformat = gst_video_format_to_fourcc (GST_VIDEO_INFO_FORMAT(&info));
   if (zcmimagesink->img.pixelformat == 0) {
@@ -132,7 +142,9 @@ gst_zcmimagesink_setcaps (GstBaseSink * bsink, GstCaps * caps)
         break;
     }
   }
-
+#else
+  zcmimagesink->img.pixelformat =  ZCM_GSTREAMER_PLUGINS_IMAGE_T_PIXEL_FORMAT_SRGGB8;
+#endif
   zcmimagesink->info = info;
 
   return TRUE;
@@ -166,7 +178,7 @@ gst_zcmimagesink_class_init (GstZcmImageSinkClass * klass)
   g_object_class_install_property (gobject_class, PROP_ZCM_URL,
           g_param_spec_string ("url", "Zcm transport url",
               "The full zcm url specifying the zcm transport to be used",
-              "", G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+              "ipc", G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class, PROP_CHANNEL,
           g_param_spec_string ("channel", "Zcm publish channel",
@@ -177,7 +189,7 @@ gst_zcmimagesink_class_init (GstZcmImageSinkClass * klass)
 static void
 gst_zcmimagesink_init (GstZcmImageSink * zcmimagesink)
 {
-  zcmimagesink->url = g_string_new("");
+  zcmimagesink->url = g_string_new("ipc");
   zcmimagesink->channel = g_string_new("GSTREAMER_DATA");
   zcmimagesink->zcm = NULL;
   memset(&zcmimagesink->img, 0, sizeof(zcmimagesink->img));
@@ -246,16 +258,18 @@ gst_zcmimagesink_finalize (GObject * object)
   GST_DEBUG_OBJECT (zcmimagesink, "finalize");
 
   /* clean up object here */
-
+  g_print ("%p\n", zcmimagesink);
+  g_print ("%p\n", zcmimagesink->zcm);
   zcm_stop(zcmimagesink->zcm);
   zcm_destroy(zcmimagesink->zcm);
   zcmimagesink->zcm = NULL;
 
+#if 0	
   if (zcmimagesink->img.stride) {
     free (zcmimagesink->img.stride);
     zcmimagesink->img.num_strides = 0;
   }
-
+#endif
   G_OBJECT_CLASS (gst_zcmimagesink_parent_class)->finalize (object);
 }
 
@@ -273,6 +287,7 @@ gst_zcmimagesink_show_frame (GstVideoSink * sink, GstBuffer * buf)
     return GST_FLOW_ERROR;
   }
 
+#if 0  
   if (zcmimagesink->zcm) {
 
     GstVideoFrame src;
@@ -309,7 +324,21 @@ gst_zcmimagesink_show_frame (GstVideoSink * sink, GstBuffer * buf)
     gst_buffer_unmap (buf, &info);
     gst_video_frame_unmap (&src);
   }
+#else
+    GstMapInfo info;
+    if (!gst_buffer_map (buf, &info, GST_MAP_READ)) {
+      GST_WARNING_OBJECT (zcmimagesink, "could not map buffer info");
+      //gst_video_frame_unmap (&src);
+      return GST_FLOW_OK;
+    }
 
+    zcmimagesink->img.size = info.size;
+    zcmimagesink->img.data = info.data;
+
+    zcm_gstreamer_plugins_image_t_publish (zcmimagesink->zcm, zcmimagesink->channel->str, &zcmimagesink->img);
+
+    gst_buffer_unmap (buf, &info);
+#endif
   return GST_FLOW_OK;
 }
 
