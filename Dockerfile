@@ -10,13 +10,14 @@ RUN echo "Set disable_coredump false" > /etc/sudo.conf && \
 
 RUN apt-get install -yq \
         libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-        gstreamer1.0-plugins-base gstreamer1.0-tools
+        gstreamer1.0-plugins-base gstreamer1.0-tools \
+        gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly
 
 RUN git clone https://github.com/ZeroCM/zcm.git
 RUN cd zcm && ./scripts/install-deps.sh && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 RUN cd zcm && \
-    ./waf configure --use-zmq --use-elf --use-ipc && \
+    ./waf configure --hash-typename=true --hash-member-names=true --use-zmq --use-elf --use-ipc && \
     ./waf build && \
     sudo ./waf install
 
@@ -29,10 +30,11 @@ ENV GST_PLUGIN_PATH /zcm-gstreamer-plugins
 ENV LD_LIBRARY_PATH /usr/local/lib:/zcm-gstreamer-plugins/build/zcmtypes
 ENV ZCM_DEFAULT_URL ipc
 
-CMD (gst-launch-1.0 videotestsrc is-live=true ! zcmimagesink &) && \
+WORKDIR /root
+
+CMD (zcm-logplayer -v zcmlog.log &) && \
     (sleep 1 && \
      echo "Launched pipeline press enter to launch zcm-spy-lite" && \
      echo "Press ctrl+C when ready to exit" && \
      read -p "" IGNORE) && \
-    zcm-spy-lite -p zcm-gstreamer-plugins/build/zcmtypes/libzcmtypes.so; \
-    fg
+     zcm-spy-lite -p /zcm-gstreamer-plugins/build/zcmtypes/libzcmtypes.so
