@@ -32,9 +32,10 @@ ENV ZCM_DEFAULT_URL ipc
 
 WORKDIR /root
 
-CMD (zcm-logplayer -v zcmlog.log &) && \
+CMD (zcm-logplayer /log/zcmlog.log &) && \
     (sleep 1 && \
      echo "Launched pipeline press enter to launch zcm-spy-lite" && \
      echo "Press ctrl+C when ready to exit" && \
      read -p "" IGNORE) && \
-     zcm-spy-lite -p /zcm-gstreamer-plugins/build/zcmtypes/libzcmtypes.so
+     gst-launch-1.0 zcmimagesrc blocksize=44728320 url=ipc channel=IMAGE ! \
+     bayer2rgb ! videoconvert ! jpegenc ! multifilesink location="./output/frame%d.jpg"
